@@ -265,14 +265,19 @@ def _sort_ingest_files_by_start_time(list_of_files=[], data_origin='OBSERVATORY'
             try:
                 dt_tstart = epoch + datetime.timedelta(seconds=int(tstart))
                 dt_tstop = epoch + datetime.timedelta(seconds=int(tstop))
-                ingest_list.append(
-                    {
-                        'filename': f.filename,
-                        'tstart': tstart,
-                        'tstop': tstop,
-                        'numPoints': f.attrs['/numPoints']
-                    }
-                )
+                
+                # perform time check, LITA-213
+                if ( (dt_tstop < datetime.datetime.now()) and ((dt_tstop - dt_tstart) < datetime.timedelta(days=1)) ):
+                    ingest_list.append(
+                        {
+                            'filename': f.filename,
+                            'tstart': tstart,
+                            'tstop': tstop,
+                            'numPoints': f.attrs['/numPoints']
+                        }
+                    )
+                else:
+                    logger.info( f"{file}: time check violated. Duration {dt_tstop - dt_tstart}, stop time {dt_tstop}" )
             except Exception as e:
                 logger.info("{}, {}".format(file, e))
                 
