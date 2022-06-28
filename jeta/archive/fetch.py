@@ -1232,6 +1232,67 @@ class MSID(object):
         f.close()
 
 
+    def logical_intervals_multiple_conditions(self, conditions, logical_operator='and', complete_intervals=True, max_gap=None):
+    
+        # conditions is a list of (operator, value) pairs.
+        # valid operators are: ==  !=  >  <  >=  <=
+        # example: [('>', 5), ('<', 10), ('!=', 7)]
+
+        # logical_operator defines how the multiple conditions should be applied
+        # valid logical_operators are: 'and'  'or'
+    
+        from . import utils
+
+        ops = {'==': operator.eq,
+               '!=': operator.ne,
+               '>': operator.gt,
+               '<': operator.lt,
+               '>=': operator.ge,
+               '<=': operator.le}
+        
+        logical_operator = logical_operator.lower()
+        
+        # Do local version of bad value filtering
+        if self.bads is not None and np.any(self.bads):
+            ok = ~self.bads
+            vals = self.vals[ok]
+            times = self.times[ok]
+        else:
+            vals = self.vals
+            times = self.times
+        
+        bools = None
+        
+        for condition in conditions:
+        
+            op = condition[0]
+            val = condition[1]
+        
+            try:
+                op = ops[op]
+            except KeyError:
+                raise ValueError('op = "{}" is not in allowed values: {}'
+                                 .format(op, sorted(ops.keys())))
+            
+            b = op(vals, val)
+            
+            if bools is None:
+                bools = b
+            elif logical_operator == 'and':
+                bools = np.logical_and(bools, b)
+            elif logical_operator == 'or':
+                bools = np.logical_or(bools, b)
+            else:
+                raise ValueError(f'logical_operator = {logical_operator} is not in allowed values: [and, or]')
+            
+            
+        return utils.logical_intervals(times, bools, complete_intervals, max_gap)
+
+    
+    
+
+
+
     def logical_intervals(self, op, val, complete_intervals=True, max_gap=None):
         """Determine contiguous intervals during which the logical comparison
         expression "MSID.vals op val" is True.  Allowed values for ``op``
